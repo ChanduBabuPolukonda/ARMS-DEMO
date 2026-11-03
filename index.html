@@ -648,6 +648,7 @@ td.ac>.amd{display:none!important}#amenu{min-width:140px;padding:4px}#amenu .btn
 .strow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px 112px}.strow .stadd{height:38px;white-space:nowrap}
 @media (max-width:600px){.strow{grid-template-columns:1fr auto auto}}
 .pform .cb>.subp{grid-column:1/-1}.subp .tggrid{gap:0 18px}
+.stepper.ro .st{cursor:default}
 </style>
 
 <style id="brand-theme">
@@ -718,7 +719,7 @@ const PSRC=[
  ['pl.groups','Platform','Reporting Groups',['view','create','edit']],['pl.xgroups','Platform','Groups',['view']],['ac.stores','Access Control','Stores',['view']],
  ['pl.clients','Platform','API Clients',['view','create']],['pl.audit','Platform','Audit Log',['view']]];
 const ACTN={view:'View',download:'Download',start:'Start',save:'Save steps',sample:'Run sample',approve:'Approve go-live',create:'Create',edit:'Edit',delete:'Delete',disable:'Disable',reset:'Reset password',unlock:'Unlock',activate:'Activate / Deactivate',map:'Map',unmap:'Unmap'};
-const PLATONLY=k=>k.startsWith('pl.')||k.startsWith('arms.');
+const PLATONLY=k=>k.startsWith('pl.');
 /* permissions are flat rows: [code, module, label]. Existing screens are expanded to one row per action; multi-action screens get a '· Action' suffix in the label */
 const PLBL={'ac.accounts:create':'Accounts · Manage users (create users)'};
 const PCAT=PSRC.flatMap(([k,m,n,a])=>a.map(x=>[k+':'+x,m,PLBL[k+':'+x]||(a.length>1?n+' · '+(ACTN[x]||x):n)]));
@@ -729,9 +730,10 @@ const PLATP=new Set(['ac.perms:create','ac.perms:edit']);
 const syncP=()=>{ALLP.length=0;ALLP.push(...PCAT.map(x=>x[0]))};
 const MODS=[['home','Overview',['home']],['rep.daily','Daily Sales',['rep.daily']],['rep.bills','Bill Wise Sales',['rep.bills']],['rep.items','Product Sales',['rep.items']],['rep.pay','Media Sales',['rep.pay']],
  ['rep.gst','Tax Reports',['rep.gst']],['rep.hourly','Hourly Sales',['rep.hourly']],['rep.cat','Category Sales',['rep.cat']],['downloads','Downloads',['downloads']],
- ['recon','Reconciliation',['recon.list','recon.new','recon.maps','dq.avail','dq.quality']],['ac','Access Control',['ac.perms','ac.roles','ac.accounts','ac.tags','ac.stores']]];
+ ['recon','Reconciliation',['recon.list','recon.new','recon.maps','dq.avail','dq.quality']],['ac','Access Control',['ac.perms','ac.roles','ac.accounts','ac.tags','ac.stores']],['arms','ARMS Integration (view)',['arms.stores','arms.ssd','arms.info','arms.errors']]];
 const MODS0=MODS.map(m=>[m[0],m[1],m[2].slice()]);
-const groupAllowed=g=>{const sc=new Set(MODS.filter(m=>(g.modules||[]).includes(m[0])).flatMap(m=>m[2]));return ALLP.filter(p=>sc.has(pkey(p)))};
+const PLAT_ONLY=new Set(['arms.ssd:start','arms.ssd:save','arms.ssd:sample','arms.ssd:approve']);
+const groupAllowed=g=>{const sc=new Set(MODS.filter(m=>(g.modules||[]).includes(m[0])).flatMap(m=>m[2]));return ALLP.filter(p=>sc.has(pkey(p))&&!PLAT_ONLY.has(p))};
 const permLabel=id=>{const c=PCAT.find(x=>x[0]==id);return c?c[2]:id};
 const REPV=['home:view',...PCAT.filter(x=>x[0].startsWith('rep.')&&x[0].endsWith(':view')).map(x=>x[0]),'downloads:view'];
 const REPD=PCAT.filter(x=>x[0].startsWith('rep.')&&x[0].endsWith(':download')).map(x=>x[0]).concat('downloads:download');
@@ -748,7 +750,7 @@ function fresh(){
  seed=7;PCAT.splice(0,PCAT.length,...PCAT0.map(x=>x.slice()));syncP();MODS.splice(0,MODS.length,...MODS0.map(m=>[m[0],m[1],m[2].slice()]));
  S={me:null,events:[],bills:[],olap:{},seq:{},insSeq:0,downloads:[],audit:[],mhist:[],lastJob:null,apiN:0,tour:-1,bts:false,dockMin:false,
   fd:{stores:[],from:'',to:''},ap:null,page:1,rf:{store:'',from:D(0),to:D(0),status:''},
-  groups:[{id:'g1',name:'ABC Foods',owner:'Arjun Mehta',mobile:'9876500011',email:'ops@abcfoods.example',address:'Banjara Hills, Hyderabad',products:['Retail','DinO','ARMS'],modules:['home','rep.daily','rep.bills','rep.items','rep.pay','rep.gst','rep.hourly','rep.cat','downloads','recon','ac'],idle:30,active:true},
+  groups:[{id:'g1',name:'ABC Foods',owner:'Arjun Mehta',mobile:'9876500011',email:'ops@abcfoods.example',address:'Banjara Hills, Hyderabad',products:['Retail','DinO','ARMS'],modules:['home','rep.daily','rep.bills','rep.items','rep.pay','rep.gst','rep.hourly','rep.cat','downloads','recon','ac','arms'],idle:30,active:true},
    {id:'g2',name:'Zest Retail',owner:'Neha Rao',mobile:'9876500022',email:'hello@zest.example',address:'Koramangala, Bengaluru',products:['Retail'],modules:['home','rep.daily','rep.bills','rep.items','downloads','ac'],idle:30,active:true}],
   roles:[
    {id:'r-ops',name:'Operations Admin',owner:'superadmin',perms:ALLP.slice()},
@@ -757,7 +759,7 @@ function fresh(){
    {id:'r-qaa',name:'ARMS QA Approver',owner:'superadmin',perms:['arms.stores:view','arms.ssd:view','arms.ssd:sample','arms.ssd:approve','arms.info:view','arms.errors:view']},
    {id:'r-cust',name:'Customer Full Access',owner:'ravi.admin',perms:[...REPV,...REPD,'dq.avail:view','dq.avail:download','dq.quality:view','dq.quality:create','dq.quality:download','recon.list:view','recon.list:download','recon.new:create','recon.maps:view','recon.maps:create','recon.maps:edit','recon.maps:delete','ac.tags:view','ac.tags:create','ac.tags:edit','ac.stores:view','ac.perms:view','ac.roles:view','ac.roles:create','ac.roles:edit','ac.roles:disable','ac.accounts:view','ac.accounts:create','ac.accounts:edit','ac.accounts:disable','ac.accounts:reset','ac.accounts:unlock']},
    {id:'r-store',name:'Store Manager',owner:'ravi.admin',perms:[...REPV,...REPD]},
-   {id:'r-south',name:'Region Manager',owner:'abcfoods',perms:[...REPV,...REPD,'dq.avail:view','dq.avail:download','dq.quality:view','dq.quality:create','dq.quality:download','recon.list:view','recon.list:download','recon.new:create','recon.maps:view','ac.tags:view','ac.tags:create','ac.stores:view','ac.perms:view','ac.roles:view','ac.accounts:view','ac.accounts:create','ac.accounts:edit','ac.accounts:disable','ac.accounts:reset','ac.accounts:unlock']},
+   {id:'r-south',name:'Region Manager',owner:'abcfoods',perms:[...REPV,...REPD,'dq.avail:view','dq.avail:download','dq.quality:view','dq.quality:create','dq.quality:download','recon.list:view','recon.list:download','recon.new:create','recon.maps:view','ac.tags:view','ac.tags:create','ac.stores:view','arms.stores:view','arms.ssd:view','arms.info:view','arms.errors:view','ac.perms:view','ac.roles:view','ac.accounts:view','ac.accounts:create','ac.accounts:edit','ac.accounts:disable','ac.accounts:reset','ac.accounts:unlock']},
    {id:'r-sview',name:'Store Viewer',owner:'abc.south',perms:REPV.slice()},
    {id:'r-gview',name:'Viewer',owner:'abcfoods',perms:REPV.slice()}].map(r=>({active:true,...r})),
   stores:[mkStore('R01','ABC Mart Hyderabad','Retail','g1'),mkStore('R02','ABC Mart Vizag','Retail','g1'),mkStore('D01','ABC Kitchen Hyderabad','DinO','g1'),mkStore('D02','ABC Kitchen Chennai','DinO','g1'),
@@ -886,7 +888,7 @@ function perms(u=S.me){if(!u)return new Set();if(u.type=='super')return new Set(
  const s=new Set();if(u.type=='group')groupAllowed(grp(u.groupId)).forEach(p=>s.add(p));else u.roles.forEach(id=>{const r=S.roles.find(r=>r.id==id);r&&r.active&&r.perms.forEach(p=>s.add(p))});
  if(u.groupId){const ga=new Set(groupAllowed(grp(u.groupId)));[...s].forEach(p=>{if(!ga.has(p))s.delete(p)})}
  const o=u.owner&&S.users.find(x=>x.u==u.owner);if(o){const op=perms(o);[...s].forEach(p=>{if(!op.has(p))s.delete(p)})}
- if(!isPlat(u))[...s].forEach(p=>{if(PLATONLY(p.split(':')[0])||PLATP.has(p))s.delete(p)});return s}
+ if(!isPlat(u))[...s].forEach(p=>{if(PLATONLY(p.split(':')[0])||PLATP.has(p)||PLAT_ONLY.has(p))s.delete(p)});return s}
 const can=p=>perms().has(p);
 const isPlat=(u=S.me)=>u&&(u.type=='super'||u.type=='admin');
 function myStores(u=S.me){
@@ -908,7 +910,7 @@ const R=[
  ['ac/perms','Permissions','Access Control','ac.perms:view',pPerms,'lock'],['ac/roles','Roles','Access Control','ac.roles:view',pRoles,'shield'],['ac/accounts','Accounts','Access Control','ac.accounts:view',pAccounts,'users'],['stores','Stores','Access Control','ac.stores:view',pStores,'store'],['stores/form','Store','Access Control','ac.stores:view',pStoreForm,'store',1],['ac/tags','Store Tags','Access Control','ac.tags:view',pTags,'tag'],
  ['groups','Reporting Groups','Platform','pl.groups:view',pGroups,'building'],['xgroups','Groups','Platform','pl.xgroups:view',pXGroups,'layers'],['groups/form','Group','Platform','pl.groups:view',pGroupForm,'building',1],
  ['apiclients','API Clients','Platform','pl.clients:view',pClients,'key'],['audit','Audit Log','Platform','pl.audit:view',pAudit,'clock']];
-const visible=r=>can(r[3])&&!(r[2]=='Reconciliation'&&!myStores().some(s=>s.arms));
+const visible=r=>can(r[3])&&!((r[2]=='Reconciliation'||r[2]=='ARMS Integration')&&!myStores().some(s=>s.arms));
 let ROUTE=location.hash.slice(2)||'login';
 const go=p=>{S.form=null;if(p.split('?')[0]!==PATH){S.fd={stores:[],from:'',to:''};S.ap=null;S.rn=null}ROUTE=p;try{history.replaceState(null,'','#/'+p)}catch(e){}render();window.scrollTo(0,0)};
 const firstRoute=()=>(R.find(visible)||['home'])[0];
@@ -1556,7 +1558,7 @@ function pAudit(){const ap=S.ap&&S.ap.kind=='audit'?S.ap:null;
 
 /* ================= group side: sub-groups (§6.4, §6.6, §6.7) ================= */
 /* ================= ARMS Integration (§10) ================= */
-const armsStores=()=>S.stores.filter(s=>s.arms);
+const armsStores=()=>myStores().filter(s=>s.arms);
 const stB=n=>B(STG[n],n==6?'gr':n==0?'':n==5?'am':'pr');
 const MODEI={'Direct Database':'db','API':'cloud','SFTP':'folder'};
 const ONB=n=>n==0?'Not started':n==6?'Live':'In progress';
@@ -1576,18 +1578,25 @@ function logPage(k){
  const rows=ap?S.logs.filter(l=>l.kind==k&&ap.stores.includes(l.store)&&l.t.slice(0,10)>=ap.from&&l.t.slice(0,10)<=ap.to):[];
  const cols=[['Store Name','sn'],['File Name','fn','h'],['Time','t'],['Message','m','h']];
  return head(k=='info'?'Info Logs':'Error Logs')+`<div class="card rf"><div class="fbar">${storePicker(armsStores())}${datePicker()}<button class="btn pr" onclick="search('${kind}')">${ic('search')}Search</button><a class="fclr" onclick="resetF()" style="${ap?'':'display:none'}">${ic('x')}Clear filters</a></div></div>
- <div class="card rt"><div class="ch"><h3>Data (${rows.length})</h3></div><div class="rbody">${ap?tbl(cols,pageRows(rows).map(l=>({...l,ns:nscin(l.store),sn:store(l.store).name,fn:`<span class="mono">${esc(logFile(l))}</span>`,m:k=='error'?`<span style="color:var(--rd)">${esc(l.msg)}</span>`:esc(l.msg)})))+pager(rows.length):empty('<b style="color:var(--ink)">No data to show</b><p style="margin-top:4px">Select a store and a date range, then click Search.</p>','search')}</div></div>`}
+ <div class="card rt"><div class="ch"><h3>Data (${rows.length})</h3></div><div class="rbody">${ap?tbl(cols,pageRows(rows).map(l=>({...l,ns:nscin(l.store),sn:store(l.store).name,fn:`<span class="mono">${esc(logFile(l))}</span>`,m:k=='error'?`<span style="color:var(--rd)">${esc(maskMsg(l.msg))}</span>`:esc(maskMsg(l.msg))})))+pager(rows.length):empty('<b style="color:var(--ink)">No data to show</b><p style="margin-top:4px">Select a store and a date range, then click Search.</p>','search')}</div></div>`}
 function pSetup(){
  const code=S.q.get('s');
  if(!code){const avail=armsStores().filter(s=>S.arms[s.code].stage==0);
   return pSsdList();return head('')+`<div class="filters"><label class="grow">Start a setup for<select id="ns">${avail.map(s=>`<option value="${s.code}">${esc(sname(s.code))}</option>`).join('')||'<option value="">No ARMS store waiting</option>'}</select></label><button class="btn pr" onclick="$('#ns').value&&go('arms/setup?s='+$('#ns').value)">${ic('plus')}Start setup</button></div>`+
   tcard('Setups',[['Store','c','h'],['Mode','m'],['Progress','p','h'],['Status','st','h'],['Last saved','l'],['Action','a','h']],armsStores().filter(s=>S.arms[s.code].stage>0).map(s=>{const a=S.arms[s.code],h=a.hist.slice(-1)[0];return{c:scell(s.code),m:a.mode,p:`<div class="share"><div class="tr"><span style="width:${a.stage/6*100}%;background:var(--c1)"></span></div><small>${a.stage}/6</small></div>`,st:stB(a.stage),l:h?h.at+' · @'+h.by:'',a:act(1,'Open',`go('arms/setup?s=${s.code}')`)}}))}
+ if(!isPlat())return ssdTrack(code);
  const a=S.arms[code],cur=Math.min(a.stage+1,6),view=Math.min(+S.q.get('step')||cur,cur);
  const steps=STG.slice(1).map((t,i)=>{const n=i+1,done=a.stage>=n;return `<button class="st ${done?'done':''} ${view==n?'cur':''} ${n>cur?'lock':''}" onclick="${n<=cur?`go('arms/setup?s=${code}&step=${n}')`:''}"><span class="dot">${done?ic('check'):n}</span><span class="tx"><b>${t}</b><small>${done?'Saved':n==cur?'Next':'Locked'}</small></span></button>`}).join('');
  let panel=[null,stepMode,stepSsdShare,stepSsdRecv,stepConfig,stepCollect,stepSample][view](code,a);if(view<6&&!can(a.stage==0?'arms.ssd:start':'arms.ssd:save'))panel=panel.replace(/class="btn pr"/g,'class="btn pr" disabled');
  return head('SSD Configuration · '+esc(store(code).name))+
   `<div class="stepper">${steps}<a class="shist" onclick="showHist('${code}')">${ic('clock')}History</a></div>${panel}`;
 }
+function ssdTrack(code){const st=store(code);if(!st||!armsStores().some(x=>x.code==code))return card('',empty('<h3 style="color:var(--ink)">You don\'t have access to this page</h3>','lock'));
+ const a=S.arms[code],last=n=>a.hist.filter(h=>h.stage==n).slice(-1)[0];
+ const steps=STG.slice(1).map((t,i)=>{const n=i+1,done=a.stage>=n;return `<div class="st ${done?'done':''} ${n==Math.min(a.stage+1,6)&&!done?'cur':''} lock"><span class="dot">${done?ic('check'):n}</span><span class="tx"><b>${t}</b><small>${done?'Saved':n==a.stage+1?'Next':'Waiting'}</small></span></div>`}).join('');
+ return head('SSD Configuration · '+esc(st.name))+`<div class="stepper ro">${steps}</div>`+card('Progress',tbl([['Step','s','h'],['Status','b','h'],['Saved by','by'],['When','at']],STG.slice(1).map((t,i)=>{const n=i+1,h=last(n);return{s:`<b style="color:var(--ink)">${t}</b>`,b:a.stage>=n?B('Done','gr'):n==a.stage+1?B('In progress','am'):B('Waiting',''),by:h?'@'+h.by:'—',at:h?h.at:'—'}})))}
+/* log lines for customers never show hosts, addresses or keys */
+const maskMsg=m=>isPlat()?m:String(m).replace(/\b\d{1,3}(\.\d{1,3}){3}\b/g,'●●●●').replace(/\b[\w-]+(\.[\w-]+)+\.(com|in|net|io|local|internal)\b/gi,'●●●●').replace(/\b(user|password|pwd|key|token)\s*[=:]\s*\S+/gi,'$1=●●●●');
 function showHist(code){const a=S.arms[code];modal('Configuration history',tbl([['Save point','p','h'],['Saved by','by'],['When','at']],a.hist.map(h=>({...h,p:B(h.stage+'. '+STG[h.stage],h.stage==6?'gr':'')})).reverse()),null,'',false,sname(code))}
 function savePoint(code,n,msg){const a=S.arms[code];a.stage=Math.max(a.stage,n);a.hist.push({stage:n,by:S.me.u,at:stamp()});
  ev('ARMS Integration API',`${code}: save point ${n} “${STG[n]}” saved in OLTP${msg?' – '+msg:''}`);audit('ARMS save point',`${code} → ${STG[n]}`);toast(`Saved: ${STG[n]}`);go(`arms/setup?s=${code}&step=${Math.min(n+1,6)}`)}
